@@ -1,6 +1,6 @@
 # Temporal Graph Neural Network #
 
-Readme in construction
+Code documentation under construction
 
 ## Requirements ##
 - pandas
