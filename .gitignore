@@ -1,0 +1,14 @@
+
+*.parquet
+*.pdf
+*.html
+*.dcat
+*.gml
+*.ini
+*.png
+
+data/madrid_intensity.csv
+data/madrid_adj.csv
+.idea
+logs
+__pycache__

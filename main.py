@@ -13,7 +13,7 @@ DATA_PATHS = {
     "shenzhen": {"feat": "data/sz_speed.csv", "adj": "data/sz_adj.csv"},
     "losloop": {"feat": "data/los_speed.csv", "adj": "data/los_adj.csv"},
     "m30": {"feat": "data/m30_speed.csv", "adj": "data/m30_speed_adj.csv"},
-    "m302": {"feat": "data/m30_speed.csv", "adj": "data/m30_speed2_adj.csv"},
+    "madrid": {"feat": "data/madrid_intensity.csv", "adj": "data/madrid_adj.csv"},
 }
 
 
@@ -21,28 +21,13 @@ def get_model(args, dm):
     model = None
     if args.model_name == "GCN":
         model = models.GCN(in_channels=args.seq_len, out_channels=args.hid_channels, improved=args.improved)
-    if args.model_name == "GCNo":
-        model = models.GCNo(adj=dm.adj, input_dim=args.seq_len, output_dim=args.hidden_dim)
     if args.model_name == "GRU":
         model = models.GRU(batch_size=args.batch_size, hid_channels=args.hid_channels)
     if args.model_name == "TGCN":
-        model = models.TGCN(hid_channels=args.hid_channels, improved=args.improved)
-    if args.model_name == "TGCNo":
-        model = models.TGCNo(adj=dm.adj, hidden_dim=args.hidden_dim)
-    if args.model_name == "TGCNv2":
-        model = models.TGCNv2(batch_size=args.batch_size, hid_channels=args.hid_channels, improved=args.improved)
+        model = models.TGCN(adj=dm.adj, hidden_dim=args.hidden_dim)
     if args.model_name == "TGAT":
-        model = models.TGAT(hid_channels=args.hid_channels, heads=args.heads, concat=args.concat,
-                            dropout=args.dropout, share_weights=args.share_weights)
-    if args.model_name == "TGATv2":
-        model = models.TGATv2(hid_channels=args.hid_channels, heads=args.heads, concat=args.concat,
-                              dropout=args.dropout, share_weights=args.share_weights)
-    if args.model_name == "TGATv3":
-        model = models.TGATv3(batch_size=args.batch_size, hid_channels=args.hid_channels, heads=args.heads,
-                              concat=args.concat, dropout=args.dropout, share_weights=args.share_weights)
-    if args.model_name == "TGATo":
-        model = models.TGATo(adj=dm.adj, hidden_dim=args.hidden_dim, heads=args.heads, concat=args.concat,
-                             dropout=args.dropout, share_weights=args.share_weights)
+        model = models.TGAT(batch_size=args.batch_size, hid_channels=args.hid_channels, heads=args.heads,
+                            concat=args.concat, dropout=args.dropout, share_weights=args.share_weights)
     if args.model_name == "GAT":
         model = models.GAT(in_channels=args.seq_len, out_channels=args.hid_channels, heads=args.heads,
                            concat=args.concat, dropout=args.dropout, share_weights=args.share_weights)
@@ -54,9 +39,9 @@ def save_results(results, args):
     path = f'{args.result_path}/{args.data}/{f}'
     if not os.path.exists(path):
         os.makedirs(path)
-    if args.model_name in ['TGAT', 'TGATv2', 'TGATv3', 'GAT']:
+    if args.model_name in ['TGAT', 'TGATv2', 'TGAT', 'GAT']:
         filename = f'{path}/{args.model_name}_{args.data}_{args.hid_channels}_{args.dropout}_{args.weight_decay}.csv'
-    elif args.model_name in ['GCNo', 'TGCNo']:
+    elif args.model_name in ['GCNo', 'TGCN']:
         filename = f'{path}/{args.model_name}_{args.data}_{args.hidden_dim}.csv'
     else:
         filename = f'{path}/{args.model_name}_{args.data}_{args.hid_channels}_{args.weight_decay}.csv'
@@ -113,7 +98,7 @@ if __name__ == '__main__':
         "--model_name",
         type=str,
         help="The name of the model for spatiotemporal prediction",
-        choices=("GCN", "GCNo", "GRU", "TGCN", "TGCNo", "TGCNv2", "TGAT", "TGATo", "TGATv2", "TGATv3", "GAT"),
+        choices=("GCN", "GRU", "TGCN", "TGAT", "GAT"),
         default="GAT",
     )
     parser.add_argument(

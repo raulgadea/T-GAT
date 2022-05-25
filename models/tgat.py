@@ -5,6 +5,7 @@ from torch_geometric.nn import GATv2Conv
 class TGATCell(torch.nn.Module):
     def __init__(
             self,
+            batch_size: int,
             in_channels: int,
             out_channels: int,
             heads: int = 1,
@@ -20,6 +21,7 @@ class TGATCell(torch.nn.Module):
             hid_channels = out_channels // heads
         else:
             hid_channels = out_channels
+        self._batch_size = batch_size
         self._in_channels = in_channels
         self._out_channels = out_channels
         self._heads = heads
@@ -27,23 +29,33 @@ class TGATCell(torch.nn.Module):
         self._dropout = dropout
         self._share_weights = share_weights
 
-        self.linear1 = torch.nn.Linear(2 * out_channels, 2 * out_channels)
-        self.linear2 = torch.nn.Linear(2 * out_channels, out_channels)
-        self.conv = GATv2Conv(in_channels, hid_channels, heads=heads, concat=concat, dropout=dropout,
-                              share_weights=share_weights, **kwargs)
+        self.conv1 = GATv2Conv(in_channels + out_channels, hid_channels * 2, heads=heads, concat=concat,
+                               dropout=dropout,
+                               share_weights=share_weights, **kwargs)
+
+        self.conv2 = GATv2Conv(in_channels + out_channels, hid_channels, heads=heads, concat=concat, dropout=dropout,
+                               share_weights=share_weights, **kwargs)
+        # self.conv1.att = torch.nn.parameter.Parameter(torch.zeros(self.conv1.att.size()) + 0.5)
+        # self.conv2.att = torch.nn.parameter.Parameter(torch.zeros(self.conv2.att.size()) + 0.5)
 
     def forward(self, x, edge_index, edge_weight, h):
-        # Convolution
-        f = torch.sigmoid(self.conv(x, edge_index))
+        # Concatenation 1
+        cat1 = torch.cat((x, h), dim=1)
+
+        # Convolution 1
+        ru = torch.sigmoid(self.conv1(cat1, edge_index))
 
         # r, u
-        cat1 = torch.concat([f, h], dim=1)
-        ru = torch.sigmoid(self.linear1(cat1))
+        ru = ru.reshape((self._batch_size, -1, 2 * self._out_channels)).reshape((self._batch_size,-1))
         r, u = torch.chunk(ru, chunks=2, dim=1)
+        r = r.reshape((self._batch_size, -1, self._out_channels)).reshape((-1, self._out_channels))
+        u = u.reshape((self._batch_size, -1, self._out_channels)).reshape((-1, self._out_channels))
+
+        # Concatenation 2
+        cat2 = torch.cat((x, r * h), dim=1)
 
         # c
-        cat2 = torch.concat([f, r * h], dim=1)
-        c = torch.tanh(self.linear2(cat2))
+        c = torch.tanh(self.conv2(cat2, edge_index))
 
         # h
         h = u * h + (1.0 - u) * c
@@ -56,6 +68,7 @@ class TGATCell(torch.nn.Module):
 
 class TGAT(torch.nn.Module):
     def __init__(self,
+                 batch_size: int,
                  hid_channels: int,
                  heads: int = 1,
                  concat: bool = True,
@@ -65,14 +78,14 @@ class TGAT(torch.nn.Module):
                  ):
         super().__init__()
 
+        self._batch_size = batch_size
         self._hid_channels = hid_channels
         self._heads = heads
         self._concat = concat
         self._dropout = dropout
         self._share_weights = share_weights
-        self.gatcell = TGATCell(1, hid_channels, heads=heads, concat=concat, dropout=dropout,
+        self.gatcell = TGATCell(batch_size, 1, hid_channels, heads=heads, concat=concat, dropout=dropout,
                                 share_weights=share_weights, **kwargs)
-
 
     def forward(self, x, edge_index, edge_weight):
         batch_nodes = x.size(0)
@@ -96,6 +109,7 @@ class TGAT(torch.nn.Module):
     @property
     def hyperparameters(self):
         return {
+            "batch_size": self._batch_size,
             "hid_channels": self._hid_channels,
             "heads": self._heads,
             "concat": self._concat,

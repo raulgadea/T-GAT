@@ -116,8 +116,6 @@ class TGCNDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, drop_last=True)
 
-    # def val_dataloader(self):
-    #     return DataLoader(self.val_dataset, batch_size=len(self.val_dataset))
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, drop_last=True)
 

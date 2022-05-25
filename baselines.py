@@ -4,7 +4,14 @@ import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import numpy.linalg as la
 import math
-from sklearn.svm import SVR, NuSVR
+from sklearn.svm import NuSVR
+
+DATA_PATHS = {
+    "shenzhen": {"feat": "data/sz_speed.csv", "adj": "data/sz_adj.csv"},
+    "losloop": {"feat": "data/los_speed.csv", "adj": "data/los_adj.csv"},
+    "m30": {"feat": "data/m30_speed.csv", "adj": "data/m30_speed_adj.csv"},
+    "madrid": {"feat": "data/madrid_intensity.csv", "adj": "data/madrid_adj.csv"},
+}
 
 
 def preprocess_data(data, time_len, rate, seq_len, pre_len):
@@ -42,8 +49,8 @@ def save_results(rmse, mae, acc, r2, var, args):
                'R2': [r2],
                'ExplainedVar': [var],
                }
-    f = int(args.pre_len/3) if args.data == 'los_speed' else args.pre_len
-    filename = f'results2/{f}/{args.method}_{args.data}.csv'
+    f = int(args.pre_len/3) if args.data == 'losloop' else args.pre_len
+    filename = f'results/{args.data}/{f}/{args.method}_{args.data}.csv'
     df = pd.DataFrame(results)
     df.to_csv(filename, sep='|', index=False)
 
@@ -61,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data",
         type=str,
-        choices=("los_speed", "sz_speed", "m30_intensity", "m30_speed"),
+        choices=("losloop", "shenzhen", "madrid", "m30"),
         default="los_speed",
     )
     parser.add_argument(
@@ -81,8 +88,8 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    path = f'data/{args.data}.csv'
-    data = pd.read_csv(path)
+    data_path = DATA_PATHS[args.data]['feat']
+    data = pd.read_csv(data_path)
 
     time_len = data.shape[0]
     num_nodes = data.shape[1]
@@ -115,7 +122,7 @@ if __name__ == "__main__":
               'HA_acc:%r' % accuracy,
               'HA_r2:%r' % r2,
               'HA_var:%r' % var)
-        # save_results(rmse, mae, accuracy, r2, var, args)
+        save_results(rmse, mae, accuracy, r2, var, args)
 
     ############ SVR #############
     if method == 'SVR':
@@ -156,60 +163,4 @@ if __name__ == "__main__":
               'SVR_r2:%r' % r2,
               'SVR_var:%r' % var)
 
-        # save_results(rmse1, mae1, acc1, r2, var, args)
-
-
-
-    ######## ARIMA #########
-    # if method == 'ARIMA':
-    #     print(data.shape[0])
-    #     rng = pd.date_range('1/1/2015', periods=data.shape[0], freq='15min')
-    #     a1 = pd.DatetimeIndex(rng)
-    #     data.index = a1
-    #     num = data.shape[1]
-    #     rmse, mae, acc, r2, var, pred, ori = [], [], [], [], [], [], []
-    #     for i in range(num_nodes):
-    #         ts = data.iloc[:, i]
-    #         ts_log = np.log(ts)
-    #         ts_log = np.array(ts_log, dtype=np.float)
-    #         where_are_inf = np.isinf(ts_log)
-    #         ts_log[where_are_inf] = 0
-    #         ts_log = pd.Series(ts_log)
-    #         ts_log.index = a1
-    #         model = ARIMA(ts_log, order=[1, 0, 0])
-    #         properModel = model.fit()
-    #         predict_ts = properModel.predict(pre_len, dynamic=True)
-    #         log_recover = np.exp(predict_ts)
-    #         ts = ts[log_recover.index]
-    #         er_rmse, er_mae, er_acc, r2_score, var_score = evaluation(ts, log_recover)
-    #         rmse.append(er_rmse)
-    #         mae.append(er_mae)
-    #         acc.append(er_acc)
-    #         r2.append(r2_score)
-    #         var.append(var_score)
-    #    for i in range(109,num):
-    #        ts = data.iloc[:,i]
-    #        ts_log=np.log(ts)
-    #        ts_log=np.array(ts_log,dtype=np.float)
-    #        where_are_inf = np.isinf(ts_log)
-    #        ts_log[where_are_inf] = 0
-    #        ts_log = pd.Series(ts_log)
-    #        ts_log.index = a1
-    #        model = ARIMA(ts_log,order=[1,1,1])
-    #        properModel = model.fit(disp=-1, method='css')
-    #        predict_ts = properModel.predict(2, dynamic=True)
-    #        log_recover = np.exp(predict_ts)
-    #        ts = ts[log_recover.index]
-    #        er_rmse,er_mae,er_acc,r2_score,var_score = evaluation(ts,log_recover)
-    #        rmse.append(er_rmse)
-    #        mae.append(er_mae)
-    #        acc.append(er_acc)
-    #        r2.append(r2_score)
-    #        var.append(var_score)
-    # acc1 = np.mat(acc)
-    # acc1[acc1 < 0] = 0
-    # print('arima_rmse:%r' % (np.mean(rmse)),
-    #       'arima_mae:%r' % (np.mean(mae)),
-    #       'arima_acc:%r' % (np.mean(acc1)),
-    #       'arima_r2:%r' % (np.mean(r2)),
-    #       'arima_var:%r' % (np.mean(var)))
+        save_results(rmse1, mae1, acc1, r2, var, args)

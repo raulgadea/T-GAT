@@ -1,4 +1,4 @@
-from .forecast_task import GATForecastTask
+from .gat_task import GATForecastTask
 from .tgcn_task import TGCNForecastTask
 
 
