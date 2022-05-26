@@ -3,6 +3,23 @@ from torch_geometric.nn import GATv2Conv
 
 
 class TGATCell(torch.nn.Module):
+    """
+    Implementation of the TGAT Cell for spatio-temporal forecasting
+
+    Args:
+        in_channels: Model input length
+        out_channels: Model output length
+        heads: Number of multi-head-attentions.
+        concat: If set to :obj:`False`, the multi-head
+            attentions are averaged instead of concatenated.
+        dropout: Dropout probability of the normalized
+            attention coefficients which exposes each node to a stochastically
+            sampled neighborhood during training.
+        share_weights: If set to :obj:`True`, the same matrix
+            will be applied to the source and the target node of every edge.
+        **kwargs (optional): Additional arguments of GATv2.
+    """
+
     def __init__(
             self,
             batch_size: int,
@@ -35,10 +52,20 @@ class TGATCell(torch.nn.Module):
 
         self.conv2 = GATv2Conv(in_channels + out_channels, hid_channels, heads=heads, concat=concat, dropout=dropout,
                                share_weights=share_weights, **kwargs)
-        # self.conv1.att = torch.nn.parameter.Parameter(torch.zeros(self.conv1.att.size()) + 0.5)
-        # self.conv2.att = torch.nn.parameter.Parameter(torch.zeros(self.conv2.att.size()) + 0.5)
 
     def forward(self, x, edge_index, edge_weight, h):
+        """
+        Forward propagation
+
+        Args:
+            x: input matrix
+            edge_index: Sparse adjacency matrix
+            edge_weight: Sparse weight adjacency matrix
+            h: Hidden state of previous cell
+
+        Returns: Forward output
+
+        """
         # Concatenation 1
         cat1 = torch.cat((x, h), dim=1)
 
@@ -46,7 +73,7 @@ class TGATCell(torch.nn.Module):
         ru = torch.sigmoid(self.conv1(cat1, edge_index))
 
         # r, u
-        ru = ru.reshape((self._batch_size, -1, 2 * self._out_channels)).reshape((self._batch_size,-1))
+        ru = ru.reshape((self._batch_size, -1, 2 * self._out_channels)).reshape((self._batch_size, -1))
         r, u = torch.chunk(ru, chunks=2, dim=1)
         r = r.reshape((self._batch_size, -1, self._out_channels)).reshape((-1, self._out_channels))
         u = u.reshape((self._batch_size, -1, self._out_channels)).reshape((-1, self._out_channels))
@@ -63,10 +90,31 @@ class TGATCell(torch.nn.Module):
 
     @property
     def hyperparameters(self):
+        """
+        Returns: Model hyperparameters
+
+        """
         return {"in_channels": self._in_channels, "out_channels": self._out_channels}
 
 
 class TGAT(torch.nn.Module):
+    """
+    Implementation of the TGAT for spatio-temporal forecasting
+
+    Args:
+        in_channels: Model input length
+        out_channels: Model output length
+        heads: Number of multi-head-attentions.
+        concat: If set to :obj:`False`, the multi-head
+            attentions are averaged instead of concatenated.
+        dropout: Dropout probability of the normalized
+            attention coefficients which exposes each node to a stochastically
+            sampled neighborhood during training.
+        share_weights: If set to :obj:`True`, the same matrix
+            will be applied to the source and the target node of every edge.
+        **kwargs (optional): Additional arguments of GATv2.
+    """
+
     def __init__(self,
                  batch_size: int,
                  hid_channels: int,
@@ -88,6 +136,17 @@ class TGAT(torch.nn.Module):
                                 share_weights=share_weights, **kwargs)
 
     def forward(self, x, edge_index, edge_weight):
+        """
+        Forward propagation
+
+        Args:
+            x: input matrix
+            edge_index: Sparse adjacency matrix
+            edge_weight: Sparse weight adjacency matrix
+
+        Returns: Forward output
+
+        """
         batch_nodes = x.size(0)
         pre_len = x.size(1)
         h = torch.zeros(batch_nodes, self._hid_channels).type_as(x)
@@ -99,6 +158,14 @@ class TGAT(torch.nn.Module):
 
     @staticmethod
     def add_model_specific_arguments(parent_parser):
+        """
+        Add specific class arguments for parsing
+        Args:
+            parent_parser: Previous parser
+
+        Returns: Updated purser
+
+        """
         parent_parser.add_argument("--hid_channels", type=int, default=64)
         parent_parser.add_argument("--heads", type=int, default=2)
         parent_parser.add_argument("--dropout", type=float, default=0.)
@@ -108,6 +175,10 @@ class TGAT(torch.nn.Module):
 
     @property
     def hyperparameters(self):
+        """
+        Returns: Model hyperparameters
+
+        """
         return {
             "batch_size": self._batch_size,
             "hid_channels": self._hid_channels,

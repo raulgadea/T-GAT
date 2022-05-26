@@ -3,6 +3,15 @@ from torch_geometric.nn import GCNConv
 
 
 class GRUCell(torch.nn.Module):
+    """
+    Implementation of the Gated Recurrent Unit Cell
+
+    Args:
+        batch_size: Batch size
+        in_channels: Model input length
+        out_channels: Model output length
+        **kwargs(optional): Additional arguments
+    """
     def __init__(
             self,
             batch_size: int,
@@ -21,6 +30,18 @@ class GRUCell(torch.nn.Module):
 
 
     def forward(self, x, edge_index, edge_weight, h):
+        """
+        Forward propagation
+
+        Args:
+            x: input matrix
+            edge_index: Sparse adjacency matrix
+            edge_weight: Sparse weight adjacency matrix
+            h: Hidden state of previous cell
+
+        Returns: Forward output
+
+        """
         # cat1
         cat1 = torch.concat([x, h], dim=1)
 
@@ -41,9 +62,22 @@ class GRUCell(torch.nn.Module):
 
     @property
     def hyperparameters(self):
+        """
+        Returns: Cell hyperparameters
+
+        """
         return {"in_channels": self._in_channels, "out_channels": self._out_channels}
 
 class GRU(torch.nn.Module):
+    """
+    Implementation of the Gated Recurrent Unit Network
+
+    Args:
+        batch_size: Batch size
+        hid_channels: Model hidden channels
+        **kwargs(optional): Additional arguments
+    """
+
     def __init__(self,
                  batch_size: int,
                  hid_channels: int,
@@ -56,6 +90,17 @@ class GRU(torch.nn.Module):
         self.grucell = GRUCell(batch_size, 1, hid_channels, **kwargs)
 
     def forward(self, x, edge_index, edge_weight):
+        """
+        Forward propagation
+
+        Args:
+            x: input matrix
+            edge_index: Sparse adjacency matrix
+            edge_weight: Sparse weight adjacency matrix
+
+        Returns: Forward output
+
+        """
         batch_nodes = x.size(0)
         pre_len = x.size(1)
         h = torch.zeros(batch_nodes, self._hid_channels).type_as(x)
@@ -67,11 +112,23 @@ class GRU(torch.nn.Module):
 
     @staticmethod
     def add_model_specific_arguments(parent_parser):
+        """
+        Add specific class arguments for parsing
+        Args:
+            parent_parser: Previous parser
+
+        Returns: Updated purser
+
+        """
         parent_parser.add_argument("--hid_channels", type=int, default=64)
         return parent_parser
 
     @property
     def hyperparameters(self):
+        """
+        Returns: Model hyperparameters
+
+        """
         return {
             "batch_size": self._batch_size,
             "hid_channels": self._hid_channels,

@@ -5,6 +5,15 @@ from utils.graph_conv import calculate_laplacian_with_self_loop
 
 
 class TGCNGraphConvolution(nn.Module):
+    """
+    Graph Convolution por GCN
+
+    Args:
+        adj: Sparse adjacency matrix
+        num_gru_units: number of hidden units
+        output_dim: output dimension
+        bias: Convolution bias parameter
+    """
     def __init__(self, adj, num_gru_units: int, output_dim: int, bias: float = 0.0):
         super(TGCNGraphConvolution, self).__init__()
         self._num_gru_units = num_gru_units
@@ -20,10 +29,23 @@ class TGCNGraphConvolution(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
+        """
+        Initialize parameters weights
+
+        """
         nn.init.xavier_uniform_(self.weights)
         nn.init.constant_(self.biases, self._bias_init_value)
 
     def forward(self, inputs, hidden_state):
+        """
+
+        Args:
+            inputs: input matrix
+            hidden_state: Hidden state of previous cell
+
+        Returns:
+
+        """
         batch_size, num_nodes = inputs.shape
         # inputs (batch_size, num_nodes) -> (batch_size, num_nodes, 1)
         inputs = inputs.reshape((batch_size, num_nodes, 1))
@@ -61,6 +83,10 @@ class TGCNGraphConvolution(nn.Module):
 
     @property
     def hyperparameters(self):
+        """
+        Returns: Model hyperparameters
+
+        """
         return {
             "num_gru_units": self._num_gru_units,
             "output_dim": self._output_dim,
@@ -69,6 +95,14 @@ class TGCNGraphConvolution(nn.Module):
 
 
 class TGCNCell(nn.Module):
+    """
+    Implementation of the TGCN Cell for spatio-temporal forecasting
+
+    Args:
+        adj: Sparse adjacency matrix
+        input_dim: Model input length
+        hidden_dim: Model hidden length
+    """
     def __init__(self, adj, input_dim: int, hidden_dim: int):
         super(TGCNCell, self).__init__()
         self._input_dim = input_dim
@@ -82,6 +116,16 @@ class TGCNCell(nn.Module):
         )
 
     def forward(self, inputs, hidden_state):
+        """
+        Forward propagation
+
+        Args:
+            inputs: input matrix
+            hidden_state: Hidden state of previous cell
+
+        Returns: Forward output
+
+        """
         # [r, u] = sigmoid(A[x, h]W + b)
         # [r, u] (batch_size, num_nodes * (2 * num_gru_units))
         concatenation = torch.sigmoid(self.graph_conv1(inputs, hidden_state))
@@ -98,10 +142,23 @@ class TGCNCell(nn.Module):
 
     @property
     def hyperparameters(self):
+        """
+        Returns: Model hyperparameters
+
+        """
         return {"input_dim": self._input_dim, "hidden_dim": self._hidden_dim}
 
 
 class TGCN(nn.Module):
+    """
+    Implementation of the TGCN for spatio-temporal forecasting from original paper
+
+    Args:
+        adj: Sparse adjacency matrix
+        hidden_dim: Model hidden length
+        **kwargs (optional): Additional arguments.
+    """
+
     def __init__(self, adj, hidden_dim: int, **kwargs):
         super(TGCN, self).__init__()
         self._input_dim = adj.shape[0]
@@ -110,6 +167,15 @@ class TGCN(nn.Module):
         self.tgcn_cell = TGCNCell(self.adj, self._input_dim, self._hidden_dim)
 
     def forward(self, inputs):
+        """
+        Forward propagation
+
+        Args:
+            inputs: input matrix
+
+        Returns: Forward output
+
+        """
         batch_size, seq_len, num_nodes = inputs.shape
         assert self._input_dim == num_nodes
         hidden_state = torch.zeros(batch_size, num_nodes * self._hidden_dim).type_as(
@@ -123,10 +189,22 @@ class TGCN(nn.Module):
 
     @staticmethod
     def add_model_specific_arguments(parent_parser):
+        """
+        Add specific class arguments for parsing
+        Args:
+            parent_parser: Previous parser
+
+        Returns: Updated purser
+
+        """
         parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--hidden_dim", type=int, default=64)
         return parser
 
     @property
     def hyperparameters(self):
+        """
+        Returns: Model hyperparameters
+
+        """
         return {"input_dim": self._input_dim, "hidden_dim": self._hidden_dim}

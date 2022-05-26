@@ -77,7 +77,7 @@ def generate_dataset(
     return np.array(train_X), np.array(train_Y), np.array(test_X), np.array(test_Y)
 
 
-def generate_torch_datasets(
+def generate_spatiotemporal_datasets(
         data, adj, seq_len, pre_len, time_len=None, split_ratio=0.8, normalize=True
 ):
     """
@@ -157,14 +157,8 @@ class GATDataModule(pl.LightningDataModule):
         (
             self.train_dataset,
             self.val_dataset,
-        ) = generate_torch_datasets(
-            self._feat,
-            self._adj,
-            self.seq_len,
-            self.pre_len,
-            split_ratio=self.split_ratio,
-            normalize=self.normalize,
-        )
+        ) = generate_spatiotemporal_datasets(self._feat, self._adj, self.seq_len, self.pre_len,
+                                             split_ratio=self.split_ratio, normalize=self.normalize)
 
     def train_dataloader(self):
         """
@@ -190,7 +184,6 @@ class GATDataModule(pl.LightningDataModule):
     @property
     def feat_max_val(self):
         """
-
         Returns: Maximun feature value for normalization
 
         """
@@ -199,7 +192,6 @@ class GATDataModule(pl.LightningDataModule):
     @property
     def adj(self):
         """
-
         Returns: Adjacency matrix
 
         """
