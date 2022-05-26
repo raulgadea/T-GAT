@@ -10,12 +10,33 @@ from .spatiotemporal_dt import SpatioTemporalDT
 
 
 def load_features(feat_path, dtype=np.float32):
+    """
+    Loads features dataset
+
+    Args:
+        feat_path: Path to features file
+        dtype: Feature data type
+
+    Returns: Features array
+
+    """
+
     feat_df = pd.read_csv(feat_path)
     feat = np.array(feat_df, dtype=dtype)
     return feat
 
 
 def load_adjacency_matrix(adj_path, dtype=np.float32):
+    """
+    Loads adjacency matrix dataset
+     Args:
+         adj_path: Path to adjacency matrix file
+         dtype: Adjacency matrix data type
+
+     Returns: Adjacency matrix array
+
+     """
+
     adj_df = pd.read_csv(adj_path, header=None)
     adj = np.array(adj_df, dtype=dtype)
     return adj
@@ -24,6 +45,20 @@ def load_adjacency_matrix(adj_path, dtype=np.float32):
 def generate_dataset(
         data, seq_len, pre_len, time_len=None, split_ratio=0.8, normalize=True
 ):
+    """
+    Generates train and test data
+
+    Args:
+        data: Features data
+        seq_len: Model input length
+        pre_len: Model output length
+        time_len: Time period length
+        split_ratio: Train test split radio
+        normalize: Normalize the data or not
+
+    Returns: Training input, Training output, Test input, Test output
+
+    """
     if time_len is None:
         time_len = data.shape[0]
     if normalize:
@@ -45,6 +80,21 @@ def generate_dataset(
 def generate_torch_datasets(
         data, adj, seq_len, pre_len, time_len=None, split_ratio=0.8, normalize=True
 ):
+    """
+    Generates train and test spatio-temporal datasets
+
+    Args:
+        data: Features data
+        adj: Adjacency matrix data
+        seq_len: Model input length
+        pre_len: Model output length
+        time_len: Time period length
+        split_ratio: Train test split radio
+        normalize: Normalize the data or not
+
+    Returns: Train dataset, Test dataset
+
+    """
     train_X, train_Y,test_X, test_Y = generate_dataset(
         data,
         seq_len,
@@ -60,6 +110,19 @@ def generate_torch_datasets(
 
 
 class GATDataModule(pl.LightningDataModule):
+    """
+    Pytorch Lighning Datamodule for Pytorch geometric models
+
+    Args:
+        feat_path: Path to features file
+        adj_path: Path to adjacency matrix file
+        batch_size: Batch size
+        seq_len: Model input length
+        pre_len: Model output length
+        split_ratio: Train test split radio
+        normalize: Normalize the data or not
+        **kwargs: Keyword arguments
+    """
     def __init__(self,
                  feat_path: str,
                  adj_path: str,
@@ -82,6 +145,15 @@ class GATDataModule(pl.LightningDataModule):
         self._adj = load_adjacency_matrix(self._adj_path)
 
     def setup(self, stage: str = None):
+        """
+        Set up train and validation spatio-temporal datasets
+
+        Args:
+            stage: Datahook variable
+
+        Returns:
+
+        """
         (
             self.train_dataset,
             self.val_dataset,
@@ -95,25 +167,54 @@ class GATDataModule(pl.LightningDataModule):
         )
 
     def train_dataloader(self):
-        # return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
+        """
+        Returns: Torch Geometric train Dataloader
+
+        """
         return DataLoader(self.train_dataset, batch_size=self.batch_size, drop_last=True)
 
     def val_dataloader(self):
+        """
+        Returns: Torch Geometric validation Dataloader
+
+        """
         return DataLoader(self.val_dataset, batch_size=self.batch_size, drop_last=True)
 
     def test_dataloader(self):
+        """
+        Returns: Torch Geometric test Dataloader
+
+        """
         return DataLoader(self.val_dataset, batch_size=self.batch_size, drop_last=True, shuffle=True)
 
     @property
     def feat_max_val(self):
+        """
+
+        Returns: Maximun feature value for normalization
+
+        """
         return self._feat_max_val
 
     @property
     def adj(self):
+        """
+
+        Returns: Adjacency matrix
+
+        """
         return self._adj
 
     @staticmethod
     def add_data_specific_arguments(parent_parser):
+        """
+        Add specific class arguments for parsing
+        Args:
+            parent_parser: Previous parser
+
+        Returns: Updated purser
+
+        """
         parent_parser.add_argument("--batch_size", type=int, default=32)
         parent_parser.add_argument("--seq_len", type=int, default=12)
         parent_parser.add_argument("--pre_len", type=int, default=3)
