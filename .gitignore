@@ -11,4 +11,5 @@ data/madrid_intensity.csv
 data/madrid_adj.csv
 .idea
 logs
+results
 __pycache__

@@ -1,10 +1,8 @@
 import argparse
 import pandas as pd
 import numpy as np
-from sklearn.metrics import mean_squared_error, mean_absolute_error
-import numpy.linalg as la
-import math
 from sklearn.svm import NuSVR
+from utils import save_baselines_results, evaluation, preprocess_data
 
 DATA_PATHS = {
     "shenzhen": {"feat": "data/sz_speed.csv", "adj": "data/sz_adj.csv"},
@@ -13,46 +11,6 @@ DATA_PATHS = {
     "madrid": {"feat": "data/madrid_intensity.csv", "adj": "data/madrid_adj.csv"},
 }
 
-
-def preprocess_data(data, time_len, rate, seq_len, pre_len):
-    data1 = np.mat(data)
-    train_size = int(time_len * rate)
-    train_data = data1[0:train_size]
-    test_data = data1[train_size:time_len]
-
-    trainX, trainY, testX, testY = [], [], [], []
-    for i in range(len(train_data) - seq_len - pre_len):
-        a = train_data[i: i + seq_len + pre_len]
-        trainX.append(a[0: seq_len])
-        trainY.append(a[seq_len: seq_len + pre_len])
-    for i in range(len(test_data) - seq_len - pre_len):
-        b = test_data[i: i + seq_len + pre_len]
-        testX.append(b[0: seq_len])
-        testY.append(b[seq_len: seq_len + pre_len])
-    return trainX, trainY, testX, testY
-
-
-###### evaluation ######
-def evaluation(a, b):
-    rmse = math.sqrt(mean_squared_error(a, b))
-    mae = mean_absolute_error(a, b)
-    F_norm = la.norm(a - b) / la.norm(a)
-    r2 = 1 - ((a - b) ** 2).sum() / ((a - a.mean()) ** 2).sum()
-    var = 1 - (np.var(a - b)) / np.var(a)
-    return rmse, mae, 1 - F_norm, r2, var
-
-def save_results(rmse, mae, acc, r2, var, args):
-    results = {'val_loss': [0],
-               'RMSE': [rmse],
-               'MAE': [mae],
-               'accuracy': [acc],
-               'R2': [r2],
-               'ExplainedVar': [var],
-               }
-    f = int(args.pre_len/3) if args.data == 'losloop' else args.pre_len
-    filename = f'results/{args.data}/{f}/{args.method}_{args.data}.csv'
-    df = pd.DataFrame(results)
-    df.to_csv(filename, sep='|', index=False)
 
 
 
@@ -122,7 +80,7 @@ if __name__ == "__main__":
               'HA_acc:%r' % accuracy,
               'HA_r2:%r' % r2,
               'HA_var:%r' % var)
-        save_results(rmse, mae, accuracy, r2, var, args)
+        save_baselines_results(rmse, mae, accuracy, r2, var, args)
 
     ############ SVR #############
     if method == 'SVR':
@@ -163,4 +121,4 @@ if __name__ == "__main__":
               'SVR_r2:%r' % r2,
               'SVR_var:%r' % var)
 
-        save_results(rmse1, mae1, acc1, r2, var, args)
+        save_baselines_results(rmse1, mae1, acc1, r2, var, args)

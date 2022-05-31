@@ -1,14 +1,17 @@
-# Temporal Graph Neural Network #
+# Attention to Traffic Forecasting: Improving Predictions with Temporal Graph Attention Networks #
 
-Code documentation under construction
+This is the PyTorch implementation of the paper: [Attention to Traffic Forecasting: Improving Predictions with Temporal Graph Attention Networks](https://www.techrxiv.org/articles/preprint/Attention_to_Traffic_Forecasting_Improving_Predictions_with_Temporal_Graph_Attention_Networks/19732483)
+
+Use baselines.py for HA and SVR models and main.py for Neural Netowrk models.
 
 ## Requirements ##
-- pandas
 - numpy
+- pandas
+- pytorch_lightning
+- scikit_learn
 - torch
+- torch_geometric
 - torchmetrics
-- Pytorch-geometric
-- Pytorch-lightning
 
 ## Example ##
 

@@ -11,6 +11,18 @@ import utils.losses
 
 
 class GATForecastTask(pl.LightningModule):
+    """
+    Implementation of GAT models training Task
+    Args:
+        model: Model object
+        loss: Training loss
+        pre_len: Model output length
+        learning_rate: Optimization learning rate
+        weight_decay: weight decay regularization
+        feat_max_val: Maximum feature value for normalizarion
+        **kwargs: Keyword arguments
+    """
+
     def __init__(
         self,
         model: nn.Module,
@@ -38,6 +50,15 @@ class GATForecastTask(pl.LightningModule):
         self.data = pd.DataFrame()
 
     def forward(self, batch):
+        """
+        Forward propagation
+
+        Args:
+            batch: Pytorch geometric batch
+
+        Returns: Forward output
+
+        """
         x, edge_index, edge_weight = batch.x, batch.edge_index, batch.edge_attr
         # (batch_size * num_nodes, hidden_dim)
         hidden = self.model(x=x, edge_index=edge_index, edge_weight=edge_weight)
@@ -49,6 +70,16 @@ class GATForecastTask(pl.LightningModule):
         return predictions
 
     def loss(self, inputs, targets):
+        """
+        Loss implementation
+
+        Args:
+            inputs: Predicted value
+            targets: Real value
+
+        Returns: Batch loss
+
+        """
         if self._loss == "mse":
             return F.mse_loss(inputs, targets)
         if self._loss == "mse_with_regularizer":
@@ -56,9 +87,22 @@ class GATForecastTask(pl.LightningModule):
         raise NameError("Loss not supported:", self._loss)
 
     def on_train_start(self):
+        """
+        Log initialization
+        """
         self.logger.log_hyperparams(self.hparams, {"train_loss": 1e3, "val_loss": 1e7})
 
     def training_step(self, batch, batch_idx):
+        """
+        Training forward pass
+
+        Args:
+            batch: Pytorch geometric batch
+            batch_idx: batch example index
+
+        Returns: Batch loss
+
+        """
         y = batch.y
         predictions = self(batch)
         loss = self.loss(predictions, y)
@@ -66,6 +110,16 @@ class GATForecastTask(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        """
+        Validation forward pass
+
+        Args:
+            batch: Pytorch geometric batch
+            batch_idx: batch example index
+
+        Returns: Batch loss
+
+        """
         y = batch.y
         predictions = self(batch)
         predictions = predictions * self.feat_max_val
@@ -82,6 +136,16 @@ class GATForecastTask(pl.LightningModule):
         return metrics
 
     def test_step(self, batch, batch_idx):
+        """
+        Test forward pass
+
+        Args:
+            batch: Pytorch geometric batch
+            batch_idx: batch example index
+
+        Returns: Batch loss
+
+        """
         y = batch.y
         predictions = self(batch)
         predictions = predictions * self.feat_max_val
@@ -98,6 +162,10 @@ class GATForecastTask(pl.LightningModule):
         return metrics
 
     def configure_optimizers(self):
+        """
+        Returns: Set up optimizator
+
+        """
         return torch.optim.Adam(
             self.parameters(),
             lr=self.hparams.learning_rate,
@@ -105,6 +173,13 @@ class GATForecastTask(pl.LightningModule):
         )
 
     def test_epoch_end(self, outputs):
+        """
+        Args:
+            outputs: Test Batch loss dictionary
+
+        Returns: Test calculated metrics
+
+        """
         rmse = torch.stack([x['test_RMSE'] for x in outputs])
         mae = torch.stack([x['test_MAE'] for x in outputs])
         metrics = {
@@ -123,6 +198,14 @@ class GATForecastTask(pl.LightningModule):
 
     @staticmethod
     def add_task_specific_arguments(parent_parser):
+        """
+        Add specific class arguments for parsing
+        Args:
+            parent_parser: Previous parser
+
+        Returns: Updated purser
+
+        """
         parent_parser.add_argument("--learning_rate", "--lr", type=float, default=1e-3)
         parent_parser.add_argument("--weight_decay", "--wd", type=float, default=1.5e-3)
         parent_parser.add_argument("--loss", type=str, default="mse")

@@ -1,10 +1,16 @@
-import numpy as np
-import scipy.sparse as sp
 import torch
-from torch.nn.functional import normalize
 
 
 def calculate_laplacian_with_self_loop(matrix):
+    """
+    Laplacian with self Loop for Graph convolution
+
+    Args:
+        matrix: Input feature matrix
+
+    Returns: Transformed input matrix
+
+    """
     matrix = matrix + torch.eye(matrix.size(0))
     row_sum = matrix.sum(1)
     d_inv_sqrt = torch.pow(row_sum, -0.5).flatten()

@@ -49,7 +49,7 @@ def generate_dataset(
     Generates train and test data
 
     Args:
-        data: Features data
+        data: Feature data
         seq_len: Model input length
         pre_len: Model output length
         time_len: Time period length

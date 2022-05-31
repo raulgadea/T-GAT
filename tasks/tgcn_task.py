@@ -9,6 +9,18 @@ import utils.losses
 
 
 class TGCNForecastTask(pl.LightningModule):
+    """
+    Implementation of TGCN training Task
+    Args:
+        model: Model object
+        loss: Training loss
+        pre_len: Model output length
+        learning_rate: Optimization learning rate
+        weight_decay: weight decay regularization
+        feat_max_val: Maximum feature value for normalizarion
+        **kwargs: Keyword arguments
+    """
+
     def __init__(
         self,
         model: nn.Module,
@@ -37,6 +49,15 @@ class TGCNForecastTask(pl.LightningModule):
         self.data = pd.DataFrame()
 
     def forward(self, x):
+        """
+        Forward propagation
+
+        Args:
+            x: input (batch_size, seq_len, num_nodes)
+
+        Returns: Forward output
+
+        """
         # (batch_size, seq_len, num_nodes)
         batch_size, _, num_nodes = x.size()
         # (batch_size, num_nodes, hidden_dim)
@@ -52,6 +73,16 @@ class TGCNForecastTask(pl.LightningModule):
         return predictions
 
     def shared_step(self, batch, batch_idx):
+        """
+        Training, validation and test processing
+
+        Args:
+            batch: Pytorch geometric batch
+            batch_idx: batch example index
+
+        Returns: prediction, real value
+
+        """
         # (batch_size, seq_len/pre_len, num_nodes)
         x, y = batch
         num_nodes = x.size(2)
@@ -61,6 +92,16 @@ class TGCNForecastTask(pl.LightningModule):
         return predictions, y
 
     def loss(self, inputs, targets):
+        """
+        Loss implementation
+
+        Args:
+            inputs: Predicted value
+            targets: Real value
+
+        Returns: Batch loss
+
+        """
         if self._loss == "mse":
             return F.mse_loss(inputs, targets)
         if self._loss == "mse_with_regularizer":
@@ -68,12 +109,32 @@ class TGCNForecastTask(pl.LightningModule):
         raise NameError("Loss not supported:", self._loss)
 
     def training_step(self, batch, batch_idx):
+        """
+        Training forward pass
+
+        Args:
+            batch: Pytorch geometric batch
+            batch_idx: batch example index
+
+        Returns: Batch loss
+
+        """
         predictions, y = self.shared_step(batch, batch_idx)
         loss = self.loss(predictions, y)
         self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
+        """
+        Validation forward pass
+
+        Args:
+            batch: Pytorch geometric batch
+            batch_idx: batch example index
+
+        Returns: Batch loss
+
+        """
         predictions, y = self.shared_step(batch, batch_idx)
         predictions = predictions * self.feat_max_val
         y = y * self.feat_max_val
@@ -88,28 +149,17 @@ class TGCNForecastTask(pl.LightningModule):
         self.log_dict(metrics)
         return metrics
 
-    # def validation_step(self, batch, batch_idx):
-    #     predictions, y = self.shared_step(batch, batch_idx)
-    #     predictions = predictions * self.feat_max_val
-    #     y = y * self.feat_max_val
-    #     loss = self.loss(predictions, y)
-    #     metrics = self.metrics_window(y, predictions)
-    #     metrics["val_loss"] = loss
-    #     self.log_dict(metrics)
-    #     return predictions.reshape(batch[1].size()), y.reshape(batch[1].size())
-
-    def metrics_window(self, ytrue, yhat):
-        metrics = dict()
-        for i in range(0, ytrue.size(1)):
-            ytruei = ytrue[:, i, :]
-            # ytruei = ytruei.reshape((-1, ytruei.size(1)))
-            yhati = yhat[:, i, :]
-            # yhati = yhati.reshape((-1, yhati.size(1)))
-            metrics[f"RMSE_{i+1}"] = torch.sqrt(torchmetrics.functional.mean_squared_error(yhati, ytruei))
-            metrics[f"MAE_{i+1}"] = torchmetrics.functional.mean_absolute_error(yhati, ytruei)
-        return metrics
-
     def test_step(self, batch, batch_idx):
+        """
+        Test forward pass
+
+        Args:
+            batch: Pytorch geometric batch
+            batch_idx: batch example index
+
+        Returns: Batch loss
+
+        """
         predictions, y = self.shared_step(batch, batch_idx)
         predictions = predictions * self.feat_max_val
         y = y * self.feat_max_val
@@ -125,6 +175,13 @@ class TGCNForecastTask(pl.LightningModule):
         return metrics
 
     def test_epoch_end(self, outputs):
+        """
+        Args:
+            outputs: Test Batch loss dictionary
+
+        Returns: Test calculated metrics
+
+        """
         rmse = torch.stack([x['test_RMSE'] for x in outputs])
         mae = torch.stack([x['test_MAE'] for x in outputs])
         metrics = {
@@ -141,6 +198,10 @@ class TGCNForecastTask(pl.LightningModule):
         return metrics
 
     def configure_optimizers(self):
+        """
+        Returns: Set up optimizator
+
+        """
         return torch.optim.Adam(
             self.parameters(),
             lr=self.hparams.learning_rate,
@@ -149,6 +210,14 @@ class TGCNForecastTask(pl.LightningModule):
 
     @staticmethod
     def add_task_specific_arguments(parent_parser):
+        """
+        Add specific class arguments for parsing
+        Args:
+            parent_parser: Previous parser
+
+        Returns: Updated purser
+
+        """
         parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--learning_rate", "--lr", type=float, default=1e-3)
         parser.add_argument("--weight_decay", "--wd", type=float, default=1.5e-3)
